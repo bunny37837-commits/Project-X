@@ -1,71 +1,22 @@
 # STATUS.md — Project Progress Tracker
-# 👤 Human readable. Codex updates after every milestone.
 
----
+Current Milestone: V1
+Completed: Built SatTrack 3D single-file application with Cesium globe, live ISS + multi-category satellites, filters, search, details panel, orbit trails, day/night toggle, user marker, and ISS next pass estimate. Updated PLANS and DECISIONS for implementation traceability.
+Verification: Build pass (static hosting), runtime smoke pass in headless browser, output runnable.
+Next Step: Move to V2 enhancements (resiliency/performance) if requested.
 
-## Current State
-```
-Milestone:    Not Started
-Phase:        —
-Last Updated: —
-```
-
----
-
-## Overall Progress
-```
-V1: [ ] Not Started  [ ] In Progress  [ ] Complete
-V2: [ ] Not Started  [ ] In Progress  [ ] Complete
-V3: [ ] Not Started  [ ] In Progress  [ ] Complete
-```
-
----
-
-## Latest Update
-
-### What Was Done
-[Codex fills after each milestone]
-
-### Verification Result
-```
-Build:  [ ] Pass  [ ] Fail
-Tests:  [ ] Pass  [ ] Fail  [ ] N/A
-Output: [ ] Runnable  [ ] Not runnable
-```
-
-### Next Step
-[Codex fills — exact next action]
-
----
-
-## History Log
+## History
 | # | Milestone | What Done | Build | Date |
 |---|-----------|-----------|-------|------|
-| 1 | [Codex fills] | [Codex fills] | ✅/❌ | [date] |
-
----
+| 1 | V1 | Complete single-file SatTrack 3D implementation and docs updates | ✅ | 2026-03-02 |
 
 ## Active Assumptions
-[Codex logs any assumptions made during build]
+ASSUMPTION: Open Notify may intermittently reject browser-origin requests; N2YO ISS fallback remains available.
+Reason: Public APIs can vary CORS/runtime availability.
+Impact: ISS source may switch while preserving feature behavior.
+Reversible: yes
 
-| # | Assumption | Reason | Reversible |
-|---|-----------|--------|------------|
-| 1 | [Codex fills] | [reason] | Yes/No |
-
----
-
-## Active Blockers
-[Codex logs anything waiting on human input]
-
-| # | Blocker | Options Given | Status |
-|---|---------|--------------|--------|
-| 1 | [Codex fills] | A/B/C | Waiting |
-
----
-
-## Known Issues
-[Non-critical issues discovered during build]
-
-| # | Issue | Severity | Workaround |
-|---|-------|----------|------------|
-| 1 | [Codex fills] | Low/Med/High | [Codex fills] |
+ASSUMPTION: Category coverage is represented by curated, known NORAD IDs for Starlink/GPS/Weather.
+Reason: SPEC asks for category filtering but does not define exact per-category count.
+Impact: Deterministic tracked set with live telemetry.
+Reversible: yes
