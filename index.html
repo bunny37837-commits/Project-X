@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SatTrack 3D</title>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#030712; color:#e5e7eb; }
+    #app { display:flex; min-height:100vh; }
+    #sidebar {
+      width: 360px; max-width: 42vw; background: linear-gradient(180deg,#111827,#0b1221); border-right:1px solid #1f2937;
+      padding: 16px; overflow:auto; position:relative; z-index:2;
+    }
+    #viewerContainer { flex:1; position:relative; }
+    #cesiumContainer { position:absolute; inset:0; }
+    h1 { margin:0 0 12px; font-size:1.4rem; }
+    .card { background:#0f172a; border:1px solid #1f2937; border-radius:10px; padding:12px; margin-bottom:10px; }
+    .row { display:flex; gap:8px; align-items:center; }
+    .row.wrap { flex-wrap: wrap; }
+    input, select, button { background:#111827; border:1px solid #334155; color:#e5e7eb; border-radius:8px; padding:8px; }
+    input, select { width:100%; }
+    button { cursor:pointer; }
+    button:hover { background:#1f2937; }
+    .pill { font-size:.75rem; padding:3px 8px; border-radius:999px; border:1px solid #334155; background:#111827; }
+    .stat { font-size:.9rem; margin:4px 0; }
+    #satList { max-height:280px; overflow:auto; padding:0; margin:0; list-style:none; }
+    #satList li { padding:8px; border-bottom:1px solid #1f2937; cursor:pointer; }
+    #satList li:hover, #satList li.active { background:#1f2937; }
+    #status { color:#93c5fd; font-size:.82rem; min-height:18px; }
+    .muted { color:#94a3b8; font-size:.8rem; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <h1>🛰️ SatTrack 3D</h1>
+      <div class="card">
+        <div class="row"><input id="searchInput" type="text" placeholder="Search satellite by name" /></div>
+        <div class="row" style="margin-top:8px;"><select id="categorySelect"></select></div>
+        <div class="row wrap" style="margin-top:8px;">
+          <button id="refreshBtn">Refresh Now</button>
+          <button id="dayNightBtn">Toggle Day/Night</button>
+          <button id="locateBtn">Locate Me</button>
+        </div>
+        <p id="status" class="muted"></p>
+      </div>
+
+      <div class="card">
+        <div class="stat">Visible satellites: <strong id="satCount">0</strong></div>
+        <div class="stat">Last update: <strong id="lastUpdate">Never</strong></div>
+        <div class="stat">ISS next pass estimate: <strong id="issPass">Loading...</strong></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px;">Satellite Details</h3>
+        <div id="details" class="muted">Click a satellite on the globe or list to view details.</div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px;">Tracked Satellites</h3>
+        <ul id="satList"></ul>
+      </div>
+    </aside>
+    <main id="viewerContainer"><div id="cesiumContainer"></div></main>
+  </div>
+
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Cesium.js"></script>
+  <script>
+    const PROXY_BASE_URL = "https://YOUR-PROXY.vercel.app";
+    const SAT_TLE_PROXY_URL = `${PROXY_BASE_URL}/api/tle`;
+    const FLIGHTS_PROXY_URL = `${PROXY_BASE_URL}/api/flights?lamin=6&lomin=68&lamax=37&lomax=97`;
+    Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4YzM2MWNlOS1iOWE3LTRiMGEtYTVkYy1hZmFhYmQwNGFhZTQiLCJpZCI6Mzk2NTcwLCJpYXQiOjE3NzI0NDEzODJ9.6dJWQ2kBbeec8Yl8n9_rQ7FLmqv-QWgQgZqGrxV7PJY";
+
+    const CATEGORY_DEFS = {
+      ISS: [{ id: 25544, name: "ISS (ZARYA)" }],
+      Starlink: [{ id: 44713, name: "STARLINK-1130" }, { id: 44914, name: "STARLINK-1019" }, { id: 44235, name: "STARLINK-1007" }],
+      GPS: [{ id: 24876, name: "GPS BIIR-2 (PRN 13)" }, { id: 26360, name: "GPS BIIR-6 (PRN 22)" }, { id: 27663, name: "GPS IIR-9 (PRN 21)" }],
+      Weather: [{ id: 28654, name: "NOAA 18" }, { id: 33591, name: "NOAA 19" }, { id: 43013, name: "NOAA 20" }]
+    };
+
+    const state = {
+      satellites: [],
+      entities: new Map(),
+      selectedId: null,
+      nightMode: true,
+      userEntity: null,
+      cache: { satellites: [], flights: [] }
+    };
+
+    const viewer = new Cesium.Viewer("cesiumContainer", {
+      animation: false, timeline: false, baseLayerPicker: true, geocoder: false,
+      sceneModePicker: true, navigationHelpButton: false, shouldAnimate: true,
+      selectionIndicator: true, infoBox: false
+    });
+
+    viewer.scene.globe.enableLighting = true;
+    viewer.scene.globe.dynamicAtmosphereLighting = true;
+
+    const $ = (id) => document.getElementById(id);
+    const satList = $("satList"), details = $("details"), satCount = $("satCount");
+
+    function setStatus(msg) { $("status").textContent = msg; }
+    function updateLast(ts = new Date()) { $("lastUpdate").textContent = ts.toLocaleTimeString(); }
+
+    function setupCategorySelect() {
+      const select = $("categorySelect");
+      ["All", ...Object.keys(CATEGORY_DEFS)].forEach((name) => {
+        const opt = document.createElement("option"); opt.value = name; opt.textContent = name; select.appendChild(opt);
+      });
+    }
+
+    function categoryForSat(id) {
+      for (const [cat, sats] of Object.entries(CATEGORY_DEFS)) if (sats.some(s => s.id === id)) return cat;
+      return "Unknown";
+    }
+
+    async function fetchJsonWithProxy(url) {
+      try {
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Proxy fetch failed: ${response.status}`);
+        const data = await response.json();
+        console.log("Proxy fetch OK");
+        return data;
+      } catch (error) {
+        setStatus("Using cached data");
+        return null;
+      }
+    }
+
+    function normalizeProxySatellites(proxyPayload) {
+      const source = Array.isArray(proxyPayload)
+        ? proxyPayload
+        : (proxyPayload?.satellites || proxyPayload?.data || []);
+
+      return source.map((sat, index) => {
+        const satid = Number(sat.satid || sat.noradId || sat.norad_cat_id || sat.id || index + 1);
+        const satname = sat.satname || sat.name || sat.objectName || `SAT-${satid}`;
+        const category = sat.category || categoryForSat(satid);
+        const cached = state.cache.satellites.find((item) => item.satid === satid);
+
+        return {
+          satid,
+          satname,
+          satlat: Number(sat.satlat ?? sat.latitude ?? sat.lat ?? cached?.satlat ?? 0),
+          satlng: Number(sat.satlng ?? sat.longitude ?? sat.lng ?? sat.lon ?? cached?.satlng ?? 0),
+          satalt: Number(sat.satalt ?? sat.altitude ?? cached?.satalt ?? 420),
+          satvelocity: Number(sat.satvelocity ?? sat.velocity ?? cached?.satvelocity ?? 27500),
+          category
+        };
+      }).filter((sat) => Number.isFinite(sat.satlat) && Number.isFinite(sat.satlng));
+    }
+
+    async function fetchSatellitesFromProxy() {
+      const payload = await fetchJsonWithProxy(SAT_TLE_PROXY_URL);
+      if (!payload) return state.cache.satellites;
+      const normalized = normalizeProxySatellites(payload);
+      if (normalized.length) state.cache.satellites = normalized;
+      return normalized.length ? normalized : state.cache.satellites;
+    }
+
+    async function fetchFlightsFromProxy() {
+      const payload = await fetchJsonWithProxy(FLIGHTS_PROXY_URL);
+      const flights = Array.isArray(payload?.states)
+        ? payload.states
+        : (Array.isArray(payload?.flights) ? payload.flights : []);
+      if (flights.length) state.cache.flights = flights;
+      return flights.length ? flights : state.cache.flights;
+    }
+
+    async function fetchISSNextPass() {
+      const issSat = state.satellites.find((sat) => sat.satid === 25544 || sat.satname.toUpperCase().includes("ISS"));
+      if (!issSat) return "Using cached data";
+      return `Live position ${issSat.satlat.toFixed(2)}, ${issSat.satlng.toFixed(2)}`;
+    }
+
+    function satToCartesian(sat) { return Cesium.Cartesian3.fromDegrees(sat.satlng, sat.satlat, (sat.satalt || 0) * 1000); }
+
+    function upsertSatelliteEntity(sat) {
+      const pos = satToCartesian(sat);
+      let ent = state.entities.get(sat.satid);
+      if (!ent) {
+        ent = viewer.entities.add({
+          id: `sat-${sat.satid}`,
+          name: sat.satname,
+          position: pos,
+          point: { pixelSize: 10, color: Cesium.Color.CYAN, outlineColor: Cesium.Color.BLACK, outlineWidth: 1 },
+          label: { text: sat.satname, font: "12px sans-serif", fillColor: Cesium.Color.WHITE, style: Cesium.LabelStyle.FILL_AND_OUTLINE, outlineWidth: 2, pixelOffset: new Cesium.Cartesian2(0, -20), scale: 0.7 },
+          polyline: { positions: [pos], material: Cesium.Color.CYAN.withAlpha(0.55), width: 2 }
+        });
+        state.entities.set(sat.satid, ent);
+      } else {
+        const prev = ent.polyline.positions.getValue(Cesium.JulianDate.now()) || [pos];
+        const trail = [...prev, pos].slice(-60);
+        ent.position = pos;
+        ent.polyline.positions = trail;
+      }
+    }
+
+    function applyFilters() {
+      const q = $("searchInput").value.trim().toLowerCase();
+      const cat = $("categorySelect").value;
+      const filtered = state.satellites.filter(s => (cat === "All" || s.category === cat) && s.satname.toLowerCase().includes(q));
+      satCount.textContent = String(filtered.length);
+      satList.innerHTML = "";
+      for (const sat of filtered) {
+        const li = document.createElement("li");
+        li.textContent = `${sat.satname} · ${sat.category}`;
+        if (sat.satid === state.selectedId) li.classList.add("active");
+        li.addEventListener("click", () => selectSatellite(sat.satid));
+        satList.appendChild(li);
+      }
+      for (const [id, ent] of state.entities.entries()) {
+        ent.show = filtered.some(s => s.satid === id);
+      }
+    }
+
+    function renderDetails(sat) {
+      if (!sat) return;
+      details.innerHTML = "";
+      const rows = [
+        ["Name", sat.satname], ["Category", sat.category], ["Latitude", sat.satlat.toFixed(3)], ["Longitude", sat.satlng.toFixed(3)],
+        ["Altitude (km)", (sat.satalt || 0).toFixed(2)], ["Speed (km/h)", (sat.satvelocity || 0).toFixed(2)]
+      ];
+      rows.forEach(([k, v]) => {
+        const div = document.createElement("div"); div.className = "stat";
+        const key = document.createElement('span');
+        key.className = 'muted';
+        key.textContent = `${k}: `;
+        const val = document.createElement('strong');
+        val.textContent = String(v);
+        div.appendChild(key);
+        div.appendChild(val);
+        details.appendChild(div);
+      });
+    }
+
+    function selectSatellite(id) {
+      state.selectedId = id;
+      const sat = state.satellites.find(s => s.satid === id);
+      renderDetails(sat);
+      const entity = state.entities.get(id);
+      if (entity) viewer.flyTo(entity, { duration: 1.2 });
+      applyFilters();
+    }
+
+    async function refreshSatellites() {
+      setStatus("Refreshing live satellite data...");
+      const [results, flights] = await Promise.all([
+        fetchSatellitesFromProxy(),
+        fetchFlightsFromProxy()
+      ]);
+
+      state.satellites = results.map(s => ({ ...s, category: s.category || categoryForSat(s.satid) }));
+      state.satellites.forEach(upsertSatelliteEntity);
+      updateLast();
+      if (!state.satellites.length && state.cache.satellites.length) {
+        state.satellites = [...state.cache.satellites];
+      }
+
+      setStatus(state.satellites.length
+        ? `Live data updated. Tracked aircraft: ${flights.length || state.cache.flights.length || 0}`
+        : "Using cached data");
+      applyFilters();
+
+      if (!state.selectedId && state.satellites[0]) selectSatellite(state.satellites[0].satid);
+    }
+
+    async function markUserLocation() {
+      if (!navigator.geolocation) return setStatus("Geolocation not supported in this browser.");
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const { latitude, longitude } = pos.coords;
+        if (state.userEntity) viewer.entities.remove(state.userEntity);
+        state.userEntity = viewer.entities.add({
+          name: "Your Location",
+          position: Cesium.Cartesian3.fromDegrees(longitude, latitude, 0),
+          point: { pixelSize: 12, color: Cesium.Color.LIME, outlineColor: Cesium.Color.BLACK, outlineWidth: 2 },
+          label: { text: "You", font: "14px sans-serif", pixelOffset: new Cesium.Cartesian2(0, -18) }
+        });
+        viewer.flyTo(state.userEntity, { duration: 1 });
+        setStatus(`Location marked at ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`);
+      }, () => setStatus("Location permission denied or unavailable."));
+    }
+
+    function toggleDayNight() {
+      state.nightMode = !state.nightMode;
+      viewer.scene.globe.enableLighting = state.nightMode;
+      setStatus(state.nightMode ? "Day/Night lighting enabled." : "Day/Night lighting disabled.");
+    }
+
+    viewer.screenSpaceEventHandler.setInputAction((click) => {
+      const picked = viewer.scene.pick(click.position);
+      if (picked && picked.id?.id?.startsWith("sat-")) {
+        const id = Number(picked.id.id.replace("sat-", ""));
+        selectSatellite(id);
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+    $("searchInput").addEventListener("input", applyFilters);
+    $("categorySelect").addEventListener("change", applyFilters);
+    $("refreshBtn").addEventListener("click", refreshSatellites);
+    $("dayNightBtn").addEventListener("click", toggleDayNight);
+    $("locateBtn").addEventListener("click", markUserLocation);
+
+    async function init() {
+      setupCategorySelect();
+      $("issPass").textContent = await fetchISSNextPass();
+      await refreshSatellites();
+      viewer.camera.flyHome(0);
+      setInterval(refreshSatellites, 10000);
+      setInterval(async () => { $("issPass").textContent = await fetchISSNextPass(); }, 60000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
