@@ -1,118 +1,38 @@
-# SPEC.md — Project Specification
-# ⭐ Fill this yourself. Codex reads this to understand what to build.
+App Name: SatTrack 3D
+Platform: Web (HTML + CSS + JavaScript, single file)
+Goal: Professional 3D satellite tracking app with live data
 
----
+Features:
+- Real 3D Earth globe (CesiumJS)
+- Live satellite positions updating every 10 seconds
+- ISS live tracking (Open Notify API - no key needed)
+- Multiple satellites from N2YO API
+- Filter satellites by category (ISS, Starlink, GPS, Weather)
+- Click satellite to see details (name, altitude, speed, lat/long)
+- Orbit path visualization
+- Day/Night Earth view
+- Your location marker
+- Next pass prediction for ISS
+- Search satellite by name
+- Satellite count display
+- Clean modern UI panel on side
 
-## App Name
-[Your app name here]
+API Keys:
+N2YO_API_KEY = "HMFZHK-PEFK9C-D4XXG8-5O6N"
+CESIUM_ION_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4YzM2MWNlOS1iOWE3LTRiMGEtYTVkYy1hZmFhYmQwNGFhZTQiLCJpZCI6Mzk2NTcwLCJpYXQiOjE3NzI0NDEzODJ9.6dJWQ2kBbeec8Yl8n9_rQ7FLmqv-QWgQgZqGrxV7PJY"
 
----
+Technical:
+- Single index.html file
+- CesiumJS for 3D globe (CDN)
+- Vanilla JavaScript
+- No build step needed
+- CORS proxy if needed for N2YO API
 
-## Goal
-[What problem does this app solve? — 2 lines max]
+Network: ON
+Allowed domains: api.n2yo.com, cesium.com, opennotify.org
 
----
+Done Means:
+User opens browser, sees 3D Earth with live satellites moving in real time, can filter and click satellites for info.
 
-## Platform
-[ ] Android
-[ ] Web
-[ ] iOS
-[ ] Cross-platform (specify): ___________
-
----
-
-## Core Features
-- [ ] Feature 1: [description]
-- [ ] Feature 2: [description]
-- [ ] Feature 3: [description]
-- [ ] Feature 4: [description]
-
----
-
-## Login / Auth
-[ ] None
-[ ] Email + Password
-[ ] Google Sign-In
-[ ] OTP (Phone)
-[ ] Other: ___________
-
----
-
-## External Services
-[ ] None
-[ ] Firebase (Firestore / Auth / Storage)
-[ ] Payment Gateway: ___________
-[ ] Maps: ___________
-[ ] Other: ___________
-
----
-
-## Data Storage
-[ ] Local only (no backend)
-[ ] Firebase
-[ ] Custom backend: ___________
-[ ] Other: ___________
-
----
-
-## Network Access Required?
-[ ] No
-[ ] Yes — Reason: ___________
-      Allowed Domains: ___________
-
----
-
-## Done Means
-> The app is DONE when a user can successfully:
-[Write one clear sentence here — e.g., "create a task, mark it complete, and see it saved after restart"]
-
----
-
-## Known Constraints
-[Any technical limits, deadline, device target, etc.]
-- ___________
-
----
-
-## Out of Scope (V1)
-[What are you NOT building in first version?]
-- ___________
-
----
-
-# ✅ EXAMPLE (Delete after reading)
-
-## App Name
-TaskFlow
-
-## Goal
-Simple daily task manager for personal use. No fluff, just tasks.
-
-## Platform
-Android
-
-## Core Features
-- Create task with title
-- Edit task
-- Mark task complete
-- Delete task
-
-## Login / Auth
-None
-
-## External Services
-None
-
-## Data Storage
-Local only (Room database)
-
-## Network Access Required?
-No
-
-## Done Means
-User can create a task, mark it complete, and see it saved after app restart — without crash.
-
-## Out of Scope (V1)
-- Notifications
-- Cloud sync
-- Multiple users
+Create PLANS.md then build complete index.html.
+Commit when done.
