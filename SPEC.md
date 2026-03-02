@@ -542,3 +542,15 @@ PERFORMANCE
 - Cache TLE data for 1 hour (localStorage)
 - Satellite positions computed off main thread if possible
 - Dedup: don't re-add entity if already exists, update position only
+MAP IMAGERY (Add as Cesium base layer):
+Use Esri World Imagery tiles — no key needed:
+new Cesium.UrlTemplateImageryProvider({
+  url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  credit: 'Esri World Imagery'
+})
+Add this as viewer's base imagery layer.
+
+DATA SOURCES — ALL FREE, NO API KEY:
+- TLE: https://corsproxy.io/?https://celestrak.org/NOAA/elements/gp.php?GROUP=active&FORMAT=tle
+- ISS: https://api.open-notify.org/iss-now.json
+- Aircraft: https://opensky-network.org/api/states/all
