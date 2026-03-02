@@ -1,75 +1,45 @@
-# DECISIONS.md — Technical Decisions Log
-# ⚙️ Codex updates this. Every major decision must be recorded here with reasoning.
+# DECISIONS.md — SatTrack 3D Technical Decisions
 
----
-
-## Decision Log Format
-Each entry must follow this format:
-
-```
-## [DEC-001] Decision Title
-Date: YYYY-MM-DD
-Status: Decided / Reconsidered / Superseded
-
-Decision: [What was decided]
-Reason:   [Why this choice]
-Rejected: [What was NOT chosen and why]
-Impact:   [What this affects]
-```
-
----
-
-## [DEC-001] Architecture Pattern
-Date: [Codex fills]
+## [DEC-001] Single-file architecture
+Date: 2026-03-02
 Status: Decided
 
-Decision: [e.g., MVVM with Repository pattern]
-Reason:   [Codex fills]
-Rejected: [Codex fills]
-Impact:   [Codex fills]
+Decision: Build the full app inside one `index.html` file with inline CSS and JavaScript.
+Reason: SPEC explicitly requires no build step and single-file delivery.
+Rejected: Multi-file bundling/toolchain, because it violates the constraint.
+Impact: Simpler deployment and direct browser execution.
 
----
-
-## [DEC-002] Database / Storage
-Date: [Codex fills]
+## [DEC-002] 3D engine selection
+Date: 2026-03-02
 Status: Decided
 
-Decision: [e.g., Room / SQLite / Firebase]
-Reason:   [Codex fills]
-Rejected: [Codex fills]
-Impact:   [Codex fills]
+Decision: Use CesiumJS loaded from CDN with provided Cesium Ion token.
+Reason: Required by SPEC for a real 3D globe and orbit visualization.
+Rejected: Three.js custom globe; higher complexity and not requested.
+Impact: High-fidelity Earth rendering and satellite entity support.
 
----
-
-## [DEC-003] Key Libraries / Dependencies
-Date: [Codex fills]
+## [DEC-003] Satellite data strategy
+Date: 2026-03-02
 Status: Decided
 
-Decision: [Codex fills]
-Reason:   [Codex fills]
-Impact:   [Codex fills]
+Decision: Use Open Notify for ISS position and N2YO endpoints for additional satellites, refreshed every 10 seconds.
+Reason: Aligns with live-data requirement and category support.
+Rejected: Static mock satellite sets; would not meet “live” requirement.
+Impact: App depends on external API responsiveness.
 
----
-
-## [DEC-004] Network Access
-Date: [Codex fills]
-Status: [Decided / Not Required]
-
-Decision: [Network OFF / ON with reason]
-Allowed Domains: [if enabled]
-Reason:   [Codex fills]
-
----
-
-## [DEC-005] Security Approach
-Date: [Codex fills]
+## [DEC-004] Network access policy
+Date: 2026-03-02
 Status: Decided
 
-Decision: [Codex fills]
-Reason:   [Codex fills]
-Impact:   [Codex fills]
+Decision: Network ON for runtime API calls.
+Allowed Domains: `api.n2yo.com`, `api.wheretheiss.at`, `api.open-notify.org`, `cesium.com`, `unpkg.com`, `cors.isomorphic-git.org`
+Reason: Required to fetch Cesium assets and live telemetry. Open Notify primary endpoint can be unavailable in browsers, so resilient fallbacks are included.
 
----
+## [DEC-005] Security approach
+Date: 2026-03-02
+Status: Decided
 
-## Future Decisions
-[Codex adds new entries here as project progresses]
+Decision: Keep all requests read-only, avoid persistent credential storage, sanitize dynamic text with `textContent`.
+Reason: Minimize XSS/credential risk in client-only app.
+Rejected: HTML string injection for convenience.
+Impact: Safer rendering and reduced exposure.
