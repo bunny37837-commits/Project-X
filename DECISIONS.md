@@ -1,45 +1,46 @@
-# DECISIONS.md — SatTrack 3D Technical Decisions
+# DECISIONS.md — SatTrack Pro Technical Decisions
 
-## [DEC-001] Single-file architecture
+## [DEC-001] Single-file production architecture
 Date: 2026-03-02
 Status: Decided
 
-Decision: Build the full app inside one `index.html` file with inline CSS and JavaScript.
-Reason: SPEC explicitly requires no build step and single-file delivery.
-Rejected: Multi-file bundling/toolchain, because it violates the constraint.
-Impact: Simpler deployment and direct browser execution.
+Decision: Implement the full product in one `index.html` with inline CSS and JavaScript.
+Reason: SPEC requires single-file delivery with no local dependency installation.
+Rejected: Multi-file or bundler-based setup.
+Impact: Zero-build deployment and portable artifact.
 
-## [DEC-002] 3D engine selection
+## [DEC-002] 3D engine and imagery stack
 Date: 2026-03-02
 Status: Decided
 
-Decision: Use CesiumJS loaded from CDN with provided Cesium Ion token.
-Reason: Required by SPEC for a real 3D globe and orbit visualization.
-Rejected: Three.js custom globe; higher complexity and not requested.
-Impact: High-fidelity Earth rendering and satellite entity support.
+Decision: Use CesiumJS (CDN) with Esri World Imagery as the base layer.
+Reason: SPEC mandates Cesium and explicitly defines Esri imagery endpoint.
+Rejected: Alternative map engines and imagery providers.
+Impact: High-fidelity 3D globe with predictable tile source.
 
-## [DEC-003] Satellite data strategy
+## [DEC-003] Telemetry source strategy (no API key)
 Date: 2026-03-02
 Status: Decided
 
-Decision: Use Open Notify for ISS position and N2YO endpoints for additional satellites, refreshed every 10 seconds.
-Reason: Aligns with live-data requirement and category support.
-Rejected: Static mock satellite sets; would not meet “live” requirement.
-Impact: App depends on external API responsiveness.
+Decision: Use only free, no-key sources from SPEC: Celestrak TLE (via corsproxy), Open Notify ISS, and OpenSky aircraft.
+Reason: User and SPEC both require free/no-key runtime data paths.
+Rejected: N2YO API-based enrichment.
+Impact: Fully keyless runtime and cleaner compliance posture.
 
-## [DEC-004] Network access policy
+## [DEC-004] Performance controls
 Date: 2026-03-02
 Status: Decided
 
-Decision: Network ON for runtime API calls.
-Allowed Domains: `api.n2yo.com`, `api.wheretheiss.at`, `api.open-notify.org`, `cesium.com`, `unpkg.com`, `cors.isomorphic-git.org`
-Reason: Required to fetch Cesium assets and live telemetry. Open Notify primary endpoint can be unavailable in browsers, so resilient fallbacks are included.
+Decision: Cap satellites at 600, update propagation every 2 seconds, deduplicate entities in a map, and cache TLE for 1 hour in `localStorage`.
+Reason: Direct alignment with SPEC performance section.
+Rejected: Unbounded entity growth and no-cache fetch model.
+Impact: Stable rendering behavior and reduced API/network churn.
 
-## [DEC-005] Security approach
+## [DEC-005] Runtime resilience and UX safety
 Date: 2026-03-02
 Status: Decided
 
-Decision: Keep all requests read-only, avoid persistent credential storage, sanitize dynamic text with `textContent`.
-Reason: Minimize XSS/credential risk in client-only app.
-Rejected: HTML string injection for convenience.
-Impact: Safer rendering and reduced exposure.
+Decision: Add loading screen, toast-only error handling, and WebGL fallback panel while keeping sidebar/HUD available.
+Reason: SPEC requires non-alert notifications and explicit fallback behavior.
+Rejected: Browser alert flow and hard-crash initialization.
+Impact: Better operational visibility and graceful degradation.

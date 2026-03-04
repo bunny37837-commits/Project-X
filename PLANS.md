@@ -1,48 +1,54 @@
-# PLANS.md — SatTrack 3D Roadmap
+# PLANS.md — SatTrack Pro Roadmap
 
 ## Status
-- Current Milestone: V1
+- Current Milestone: V3
 - State: In Progress
 
 ## V1 — Core working feature
 ### Goal
-Deliver a runnable single-file Cesium-based satellite tracker with live ISS + category satellites, interactive details, and side-panel controls.
+Deliver a runnable single-file SatTrack Pro application with a tactical UI shell, Cesium globe, and live telemetry.
 
 ### Done Means
-- `index.html` opens and renders a 3D Cesium globe.
-- Satellites render as moving entities with refresh every 10 seconds.
-- ISS data and pass prediction are displayed.
-- Search/filter/detail panel works.
-- Orbit path visualization and user location marker are visible.
+- `index.html` renders full-screen tactical layout with top bar, left sidebar, right detail panel, and bottom HUD.
+- Cesium globe initializes with required viewer options and Esri World Imagery base layer.
+- TLE, ISS, and Aircraft integrations are wired with update intervals.
+- Satellite rendering, category assignment, selection, and search/filter controls function.
 
 ### Tasks
-- [x] Define architecture and network decisions in `DECISIONS.md`.
-- [x] Build single-file app UI + Cesium globe.
-- [x] Integrate Open Notify ISS endpoint.
-- [x] Integrate N2YO category satellites (via direct + proxy fallback).
-- [x] Add category filtering, search, count, detail panel.
-- [x] Add orbit path, day/night view, and user marker.
-- [ ] Final V1 verification + milestone lock.
+- [x] Implement fixed layout and design system tokens in a single HTML file.
+- [x] Initialize Cesium with required operational settings.
+- [x] Integrate live sources (TLE + ISS + aircraft) and render entities.
+- [x] Add category filtering, mission feed list, and detail panel selection.
 
 ## V2 — Complete feature set
 ### Goal
-Improve resiliency and UX quality.
+Complete all requested interaction and monitoring systems.
+
+### Done Means
+- Visual modes (NORMAL/NIGHT/THERMAL/CRT) are fully functional.
+- Toast notification system replaces browser alerts for runtime events.
+- Keyboard shortcuts and control actions are available.
+- Orbit trails, coordinate HUD updates, and fullscreen/pause controls work.
 
 ### Tasks
-- [ ] Add caching and smoother interpolation between updates.
-- [ ] Add expanded satellite metadata cards.
-- [ ] Improve error states and retries by endpoint.
+- [x] Implement mode switch controls and CSS visual pipelines.
+- [x] Add toast system with typed severity styling.
+- [x] Implement keyboard shortcuts and right-panel open/close flows.
+- [x] Add coordinate tracking and FPS monitoring in HUD/stats.
 
 ## V3 — Production ready
 ### Goal
-Harden deployment readiness.
+Ship hardened production build with caching, runtime resilience, and documentation sync.
+
+### Done Means
+- Satellite count capped at 600 and entity dedup/update strategy enforced.
+- TLE localStorage cache uses 1-hour TTL.
+- Loading screen and WebGL fallback behavior present.
+- Documentation updated for milestones and project status.
+- Build/test checks pass and runnable output exists.
 
 ### Tasks
-- [ ] Optimize rendering settings + memory cleanup.
-- [ ] Add smoke tests and accessibility pass.
-- [ ] Final docs and release checklist.
-
-## Risks & Mitigations
-- Browser CORS limits against N2YO → use safe CORS proxy fallback.
-- Third-party API rate limits → staggered refresh + concise dataset.
-- Geolocation permission denial → graceful fallback text.
+- [x] Enforce render/update performance constraints and periodic refresh loops.
+- [x] Add loading state and WebGL-required fallback panel.
+- [x] Complete docs updates (`PLANS.md`, `STATUS.md`, `DECISIONS.md`) for release traceability.
+- [ ] Final verification checklist lock for V3 release.
